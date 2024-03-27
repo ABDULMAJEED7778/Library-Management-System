@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load thumbnail %}
+{% load humanize %}
+{% load rating_stuff %}
+
+{% block title %}
+  {{ user.username }}'s Dashboard |
+{% endblock %}
+
+{% block content %}
+	<section id="showcase-inner" class="py-5 text-white" style="background-size:cover;">
+    <div class="container">
+      <div class="row text-center">
+        <div class="col-md-12">
+          {% if user.profile.photo %}
+            <img src="{% thumbnail user.profile.photo 100x0 %}" class="img-fluid img-thumbnail-edit" style="object-fit:cover; border-radius: 50%; height: 100px; width:100px;">
+
+          {% else %}
+            <img class="img-fluid img-thumbnail-edit" src="{% static 'img/avatar.png' %}" style="border-radius: 50%;">
+          {% endif %}
+          <h1 class="display-4">{{ user.username }}'s Dashboard</h1>
+          <p class="lead">Manage your Barham Library account</p>
+          <!--<p class="date mb-0">
+            <a href="{% url 'edit' %}">Edit profile</a> &bull;
+            <a href="{% url 'change_password' %}">Change password</a>
+          </p>-->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Breadcrumb -->
+  <section id="bc" class="mt-3 mb-0">
+    <div class="container">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item">
+            <a href="{% url 'index' %}">
+              <i class="fas fa-home"></i> Home</a>
+          </li>
+          <li class="breadcrumb-item active"> Dashboard</li>
+        </ol>
+      </nav>
+    </div>
+  </section>
+
+  <!-- Alerts -->
+  {% include 'partials/_alerts.html' %}
+
+  <section id="dashboard" class="py-4">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-12">
+
+          
+            <p class="small text-right">
+              <a href="{% url 'edit' %}">Edit profile</a> &bull;
+              <a href="{% url 'change_password' %}">Change password</a>
+            </p>
+          
+
+          <!-- Reservations -->
+          <h4 class="display-4 text-center">Reservations</h4>
+          {% if user_reservations %}
+            <table class="table">
+              <thead>
+                <tr>
+                  <!-- <th scope="col">#</th> -->
+                  <th scope="col">Book</th>
+                  <th scope="col">Reserved on</th>
+                  <th scope="col">Can collect?</th>
+                  <th scope="col">Expires on</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for reservation in user_reservations %}
+                {% with reservation.book as book %}
+                  <tr
+                  {% if reservation.can_collect %}
+                    class="table-success"
+                  {% endif %}
+                  >
+                    <td><a href="{{ book.get_absolute_url }}">{{ book.title }}</a></td>
+                    <td>{{ reservation.reservation_date|naturalday|title }}</td>
+                    <td>{% if reservation.can_collect == True %} Yes {% else %} No {% endif %}</td>
+                    <td>{% if reservation.reservation_expiry %} {{ reservation.reservation_expiry|naturalday|title }} {% endif %}</td>
+                  </tr>
+                {% endwith %}
+                {% endfor %}
+              </tbody>
+            </table>
+
+            <form action="{% url 'delete_reservation' %}" method="POST">
+              {% csrf_token %}
+              <div class="form-row">
+                <div class="col-md-4">
+                  <select name="del_reservation" class="form-control mt-2" id="del_reservation">
+                    <option selected="true" disabled="disabled">Select reservation</option>
+                    {% for reservation in user_reservations %}
+                      <option value="{{ reservation.id }}"> {{ reservation }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-8">
+                  <button class="btn btn-primary mt-2" type="submit">Delete reservation</button>
+                </div>
+              </div>
+            </form>
+            <!-- <a class="btn-primary btn-block btn-lg" href="{% url 'index' %}">Delete all</a> -->
+            <br>
+          {% else %}
+            <hr>
+            <p>No current reservations</p>
+            <br>
+          {% endif %}
+
+          <!-- Records -->
+          {% if user_records %}
+            <h4 class="display-4 text-center">Records</h4>
+            {% if can_extend %}
+              <form action="{% url 'extend_all_loans' %}" method="POST">
+                {% csrf_token %}
+                <div class="text-right">
+                  <button class="btn btn-primary mb-2" type="submit">Renew loans by 30 days</button>
+                </div>
+              </form>
+            {% endif %}
+            <!--{% if user_records.count == 5 %}
+              <p style="font-family: georgia, serif; font-style: italic; text-align:center;">(showing 5 most recent)</p>
+            {% endif %}-->
+            <table class="table">
+              <thead>
+                <tr>
+                  <!-- <th scope="col">#</th> -->
+                  <th scope="col">Book title</th>
+                  <th scope="col">Date taken out</th>
+                  <th scope="col">Date returned</th>
+                  {% if active %}
+                    <th scope="col">Date due back</th>
+                  {% endif %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for record in user_records %}
+                  <tr
+                    {% if record.date_returned == None %}
+                      {% if record.is_overdue %}
+                        class="table-danger"
+                      {% else %}
+                        class="table-success"
+                      {% endif %}
+                    {% endif %}
+                  >
+                    <td><a href="{{ record.get_book_link }}">{{ record.book_title }}</a></td>
+                    <td>{{ record.date_taken_out|naturalday|title }}</td>
+                    <td>{% if record.date_returned %} {{ record.date_returned|naturalday|title }}{% endif %}</td>
+                    {% if active %}
+                      <td>
+                        {{ record.get_due_back_date|naturalday|title }}
+                      </td>
+                    {% endif %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td></td>
+                  <td></td>
+                  {% if active %}
+                    <td></td>
+                  {% endif %}
+                  <td>
+                    <div class="text-right">
+                      <a href="{% url 'view_records' %}" class="btn btn-outline-primary">
+                        See all records &raquo;
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+            <br>
+          {% endif %}
+
+          <!-- Liked books -->
+          <h4 class="display-4 text-center">Liked books</h4>
+          <hr>
+          {% if books_liked %}
+            <div class="row">
+              {% for book in books_liked %}
+                <div class="col-lg-2 col-md-3 col-sm-4 col-4 text-center mb-2">
+                  <a href="{{ book.get_absolute_url }}">
+                    {% if book.photo %}
+                      <img src="{% thumbnail book.photo 100x0 %}" class="img-fluid img-thumbnail-edit">
+                    {% else %}
+                      <img class="img-fluid img-thumbnail-edit" src="{% static 'img/blank.png' %}" alt="">
+                    {% endif %}
+                  </a>
+                  <div class="d-none d-md-block">
+                    <a href="{{ book.get_absolute_url }}">
+                      {{ book.title }}
+                    </a>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            <br>
+          {% else %}
+            <p>No liked books. Start liking some now, by using our
+            <a href="{% url 'books' %}" class="badge badge-pill badge-secondary mb-1" style="font-weight:600;">Book Search</a></p>
+            <br>
+          {% endif %}
+
+          <!-- Reviews -->
+          <h4 class="display-4 text-center">Reviews</h4>
+          <hr>
+          {% if request.user.reviews.all %}
+            <p style="font-family: georgia, serif; font-style: italic; text-align:center;">(in reverse chronological order)</p>
+
+            <!-- Accordion -->
+            <!--<div id="accordion" class="text-left">
+              {% for review in request.user.reviews.all %}
+                <h3>{{ review.book.title }}</h3>
+                <div style="font-family: georgia;">
+                  <h4 >{{ review.title }}</h4>
+                  <p>
+                    {{ review.body|linebreaks }}
+                  </p>
+                  <a href="{{ review.book.get_absolute_url }}" class="btn btn-light mr-2">View book</a>
+                  <div class="float-right"><a href="{% url 'del_review' review.id %}" class="btn btn-light">Delete review</a></div>
+                  <p class="text-right">
+                    <small class="text-muted">
+                      Last updated {{ review.updated|timesince }} ago
+                    </small>
+                  </p>
+                </div>
+              {% endfor %}
+            </div>-->
+
+            <!-- Review accordion -->
+            <div class="container">
+              <div class="col-md-12">
+                <div id="accordion">
+                  {% for review in request.user.reviews.all %}
+                    <h3>{{ review.book.title }}</h3>
+                    <div class="row">
+                      <div class="col-md-3 col-lg-2 d-none d-md-block">
+                        <a href="{{ review.book.get_absolute_url }}">
+                        {% if review.book.photo %}
+                          <img src="{% thumbnail review.book.photo 100x0 %}" class="img-fluid img-thumbnail-edit">
+                        {% else %}
+                          <img class="img-fluid img-thumbnail-edit" src="{% static 'img/blank.png' %}">
+                        {% endif %}
+                      </a>
+                      </div>
+                      <div class="col-md-9 col-lg-10 col-sm-12 col-12">
+
+                        <!-- Rating star stuff - uses custom subtract filter -->
+                        {% if review.rating %}
+                          {% with ''|center:review.rating as range %}
+                            {% for _ in range %}
+                              <i class="fas fa-star"></i>
+                            {% endfor %}
+                          {% endwith %}
+                          {% with review.rating|subtract as empty_stars %}
+                            {% with ''|center:empty_stars as range %}
+                              {% for _ in range %}
+                                <i class="far fa-star"></i>
+                              {% endfor %}
+                            {% endwith %}
+                          {% endwith %}
+                        {% endif %}
+
+                        <h5>{{ review.title }}</h5>
+                        <p>
+                          {{ review.body|linebreaks }}
+                        </p>
+                        <p class="text-right">
+                          <small class="text-muted">
+                            Last updated {{ review.updated|timesince }} ago
+                          </small>
+                        </p>
+                      </div>
+                      <div class="col-md-12">
+                        <a href="{{ review.book.get_absolute_url }}" class="btn btn-light mr-2">View book</a>
+                        <div class="float-right">
+                          <a href="{% url 'del_review' review.id %}" class="btn btn-light">Delete <span class="d-none d-md-inline">review</span></a>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            <br>
+          {% else %}
+            <p>You haven't written any reviews yet</p>
+            <br>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block extrascripts %}
+  <!-- This is for the accordion -->
+  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  <script>
+  $( function() {
+    $( "#accordion" ).accordion();
+  } );
+  </script>
+{% endblock extrascripts %}

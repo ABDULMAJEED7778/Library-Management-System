@@ -1,0 +1,133 @@
+{% extends 'base.html' %} {% load static %} {% load crispy_forms_tags
+%} {% block title %} Browse books | {% endblock %} {% block content %}
+<section id="search-splash" class="text-white">
+  <div class="container" style="overflow: auto">
+    <div class="row text-center">
+      <div class="col-md-12">
+        <!-- Alerts -->
+        {% include 'partials/_alerts.html' %}
+
+        <h1 class="display-4">Search our library of books</h1>
+
+        <br />
+
+        <!-- New form -->
+        <form action="{% url 'book_search' %}">
+          <div class="row no-gutters">
+            <div class="input-group mb-3">
+              <input
+                type="text"
+                name="keywords"
+                class="form-control"
+                placeholder="Enter book title, series, author's name..."
+                id="keywords"
+                required
+                minlength="3"
+              />
+              <div class="input-group-addon">
+                <select
+                  name="category"
+                  class="custom-select"
+                  style="
+                    background-color: rgba(32, 134, 107, 0.8);
+                    color: #e8e8e8;
+                  "
+                >
+                  <option selected="true" value="-1">
+                    All categories
+                  </option>
+                  {% for cat in categories %}
+                  <option value="{{ cat.id }}">
+                    {{ cat.short_name }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="input-group-append">
+                <button class="btn btn-outline-light" type="submit">
+                  <i class="fa fa-search"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <br />
+
+    <div class="row text-center mt-4">
+      <div class="col-md-3">
+        <h3>
+          <a
+            href="{% url 'filter_by_tags' %}"
+            class="btn btn-outline-light mb-3"
+          >
+            <!--<i class="fas fa-tags mr-2"></i>-->Explore Tags
+            &raquo;
+          </a>
+        </h3>
+      </div>
+      <div class="col-md-3">
+        <h3>
+          <a
+            href="{% url 'books_all' %}"
+            class="btn btn-outline-light mb-3"
+          >
+            <!--<i class="fas fa-sort-alpha-down mr-2"></i>-->Book A -
+            Z &raquo;
+          </a>
+        </h3>
+      </div>
+      <div class="col-md-3">
+        <div class="btn-group dropup">
+          <button
+            type="button"
+            class="btn btn-outline-light mb-3 dropdown-toggle"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+          >
+            Browse Categories
+          </button>
+          <div class="dropdown-menu">
+            {% for cat in categories %}
+            <a
+              class="dropdown-item"
+              href="{% url 'category' cat.code %}"
+            >
+              {{ cat.name }}
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <h3>
+          <a
+            href="{% url 'about' %}"
+            class="btn btn-outline-light mb-3"
+          >
+            <!--<i class="fas fa-question mr-2"></i>-->About Us
+            &raquo;
+          </a>
+        </h3>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %} {% block extrascripts %}
+
+<!-- Autocomplete -->
+<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script>
+  $( function() {
+    $( "#keywords" ).autocomplete({
+      source: "{% url 'books' %}",
+      minLength: 3
+    });
+  } );
+</script>
+{% endblock extrascripts %}

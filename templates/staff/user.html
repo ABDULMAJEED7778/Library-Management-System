@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+	<section id="work" class="bg-dark text-white text-center" style="padding: 2rem 0;">
+    <div class="container">
+      <div class="row text-center">
+        <div class="col-md-12">
+          <h1 class="display-4">{{ looked_up_user.username }}
+            {% if looked_up_user.profile.verified %}
+              <i class="far fa-check-circle"></i>
+            {% else %}
+              <i class="far fa-times-circle"></i>
+            {% endif %}
+          </h1>
+          <p class="lead">Member since {{ user.date_joined|naturalday }}</p>
+          <h3 class="mt-2">
+            <a class="btn btn-outline-secondary mb-1 mr-3" href="{% url 'staff_edit' looked_up_user.id %}">Edit user &raquo;</a>
+            {% if looked_up_user.profile.verified %}
+              <a class="btn btn-outline-secondary mb-1 mr-3" href="{% url 'loan_books' looked_up_user.id %}">Loan books for user &raquo;</a>
+            {% endif %}
+            {% if active_user_records %}
+              <button class="btn btn-outline-secondary mb-1 mr-3" data-toggle="modal" data-target="#returnModal">Return all books &raquo;</button>
+            {% endif %}
+            <a href="mailto:{{ looked_up_user.email }}" class="btn btn-outline-secondary mb-1 mr-3">Send user email &raquo;</a>
+          </h3>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Breadcrumb -->
+  <section id="bc" class="mt-3">
+    <div class="container">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item">
+            <a href="{% url 'index' %}">
+              <i class="fas fa-home"></i> Home</a>
+          </li>
+          <li class="breadcrumb-item">
+            <a href="{% url 'staff' %}">
+              Staff</a>
+          </li>
+          <li class="breadcrumb-item">
+            <a href="{% url 'users' %}">
+              Users</a>
+          </li>
+          <li class="breadcrumb-item active"> {{ looked_up_user.username }}</li>
+        </ol>
+      </nav>
+    </div>
+  </section>
+
+  <!-- Alerts -->
+  {% include 'partials/_alerts.html' %}
+
+  <section id="dashboard" class="py-4">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-12">
+          <h3 class="text-center">Reservations</h3>
+          {% if user_reservations %}
+            <table class="table">
+              <thead>
+                <tr>
+                  <th scope="col">Book title</th>
+                  <th scope="col">Date reserved</th>
+                  <th scope="col">Date expires</th>
+                  <th scope="col">Can collect?</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for reservation in user_reservations %}
+                  <tr
+                    {% if reservation.can_collect %}
+                      class="table-success"
+                    {% else %}
+                      class="table-light"
+                    {% endif %}
+                  >
+                    <td><a href="{{ reservation.book.get_absolute_url }}">
+                      {{ reservation.book.title }}
+                    </a></td>
+                    <td>{{ reservation.reservation_date|naturalday|title }}</td>
+                    <td>{% if reservation.reservation_expiry %} {{ reservation.reservation_expiry|naturalday|title }} {% endif %}</td>
+                    <td>{{ reservation.can_collect }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <br>
+          {% else %}
+            <hr>
+            <p>No current reservations</p>
+            <br>
+          {% endif %}
+
+          <h3 class="text-center">Records</h3>
+          {% if user_records %}
+            {% if active_user_records_count > 0 %}
+              <p style="font-family: georgia, serif; font-style: italic; text-align:center;">({{ active_user_records_count }} active loan{{ active_user_records_count|pluralize }})
+              </p>
+            {% endif %}
+            <table class="table">
+              <thead>
+                <tr>
+                  <th scope="col">Book title</th>
+                  <th scope="col">Date taken out</th>
+                  <th scope="col">Date returned</th>
+                  <th scope="col">Date due back</th>
+                  <th scope="col">
+                  	{% if active_user_records %}
+											<button class="btn btn-primary btn-block" data-toggle="modal" data-target="#returnModal">Return all books &raquo;</button>
+										{% endif %}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for record in user_records %}
+                  <tr
+                    {% if record.date_returned == None %}
+                      {% if record.is_overdue %}
+                        class="table-danger"
+                      {% else %}
+                        class="table-success"
+                      {% endif %}
+                    {% endif %}
+                  >
+                    <td><a href="{{ record.get_book_link }}">
+                      {{ record.book_title }}
+                    </a></td>
+                    <td>{{ record.date_taken_out|naturalday|title }}</td>
+                    <td>
+                    	{% if record.date_returned %}
+                    		{{ record.date_returned|naturalday|title }}
+                    	{% endif %}
+                    </td>
+                    <td>{{ record.get_due_back_date|naturalday|title }}</td>
+                    <td>
+                      {% if not record.date_returned %}
+                        <a href="{% url 'return_single_book' record.id %}" class="btn btn-outline-primary">Return this book &raquo;</a>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <hr>
+          	<p>No previous records</p>
+          {% endif %}
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12">
+          {% if user_records.has_other_pages %}
+            <ul class="pagination">
+              {% if user_records.has_previous %}
+                <li class="page-item">
+                  <a href="?page={{user_records.previous_page_number}}" class="page-link">&laquo;</a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <a class="page-link">&laquo;</a>
+                </li>
+              {% endif %}
+              {% for i in user_records.paginator.page_range %}
+                {% if user_records.number == i %}
+                  <li class="page-item active">
+                    <a class="page-link">{{i}}</a>
+                  </li>
+                {% else %}
+                  <li class="page-item">
+                    <a href="?page={{i}}" class="page-link">{{i}}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+              {% if user_records.has_next %}
+                <li class="page-item">
+                  <a href="?page={{user_records.next_page_number}}" class="page-link">&raquo;</a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <a class="page-link">&raquo;</a>
+                </li>
+              {% endif %}
+            </ul>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="modal fade" id="returnModal" role="dialog">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="inquiryModalLabel">Return books</h5>
+          <button type="button" class="close" data-dismiss="modal">
+            <span>&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          Confirm returning all of the following books:
+          <ul>
+          {% for record in active_user_records %}
+          	<li>
+          		{{ record.book_title }} (#{{ record.book_instance_id }})
+          	</li>
+          {% endfor %}
+          </ul>
+          <a class="btn btn-secondary btn-block mt-4" href="{% url 'return_books' looked_up_user.id %}">Return all</a>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

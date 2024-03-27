@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+	
+  <section id="work" class="bg-dark text-white text-center" style="padding: 3rem 0;">
+    <div class="container">
+      <div class="row text-center">
+        <div class="col-md-12">
+          <h1 class="display-4">Staff Dashboard</h1>
+          <br>
+          <!--<p class="lead">Do stuff</p>-->
+          
+          <h3 class="mt-2">
+            <a href="{% url 'users' %}" class="btn btn-outline-secondary btn-lg mb-1 mr-3">
+              View all users &raquo;
+            </a>
+            <a href="{% url 'add_book' %}" class="btn btn-outline-secondary btn-lg mb-1">
+              Add book &raquo;
+            </a>
+          </h3>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Breadcrumb -->
+  <section id="bc" class="mt-3">
+    <div class="container">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item">
+            <a href="{% url 'index' %}">
+              <i class="fas fa-home"></i> Home</a>
+          </li>
+          <li class="breadcrumb-item active"> Staff</li>
+        </ol>
+      </nav>
+    </div>
+  </section>
+
+  <!-- Alerts -->
+  {% include 'partials/_alerts.html' %}
+
+  <section id="dashboard" class="py-4">
+    <div class="container">
+      <div class="row">
+
+        <!-- Reservations -->
+        <div class="col-md-12">
+          <h3 class="text-center">Reservations</h3>
+          {% if reservations %}
+            <table class="table">
+              <thead>
+                <tr>
+                  <th scope="col">Book</th>
+                  <th scope="col">Date reserved</th>
+                  <th scope="col">Date expires</th>
+                  <th scope="col">Can collect?</th>
+                  <th scope="col">Reserved by</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for res in reservations %}
+                  <tr
+                    {% if res.can_collect %}
+                      {% if res.expired %}
+                        class="table-danger"
+                      {% else %}
+                        class="table-success"
+                      {% endif %}
+                    {% else %}
+                      class="table-light"
+                    {% endif %}
+                  >
+                    <td><a href="{{ res.book.get_absolute_url }}">{{ res.book.title }}</a></td>
+                    <td>{{ res.reservation_date|naturalday|title }}</td>
+                    <td>
+                      {% if res.reservation_expiry %} {{ res.reservation_expiry|naturalday|title }} {% endif %}
+                    </td>
+                    <td>{{ res.can_collect }}</td>
+                    <td scope="col"><a href="{% url 'user' res.user_id %}">{{ res.get_username }}</a></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
+            <form class="form-inline" action="{% url 'delete_reservation' %}" method="POST">
+              {% csrf_token %}
+              <div class="form-group mx-sm-3 mb-2">
+                <!-- <label for="del_reservation">Delete reservation:  </label> -->
+                <select name="del_reservation" class="form-control">
+                  <option selected="true" disabled="disabled">Select reservation to delete</option>
+                  {% for res in reservations %}
+                    <option value="{{ res.id }}"> {{ res }} ({{ res.get_username }})</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <button class="btn btn-primary mb-2" type="submit">Delete reservation &raquo;</button>
+            </form>
+            <br>
+          {% else %}
+            <hr>
+            <p>No current reservations</p>
+            <br>
+          {% endif %}
+        </div>
+
+        <!-- Records -->
+        <div class="col-md-12">
+          <h3 class="text-center"> Active records</h3>
+          {% if active_records %}
+            <table class="table">
+              <thead>
+                <tr>
+                  <th scope="col">Book title</th>
+                  <th scope="col">Date taken out</th>
+                  <th scope="col">Date due back</th>
+                  <th scope="col">Overdue?</th>
+                  <th scope="col">User</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for record in active_records %}
+                  <tr
+                  {% if record.is_overdue %}
+                    class="table-danger"
+                  {% else %}
+                    class="table-success"
+                  {% endif %}
+                  >
+                    <td><a href="{{ record.get_book_link }}">
+                      {{ record.book_title }}
+                    </a></td>
+                    <td>
+                      {{ record.date_taken_out|naturalday|title }}
+                    </td>
+                    <td>
+                      {{ record.get_due_back_date|naturalday|title }}
+                    </td>
+                    <td>
+                      {{ record.is_overdue }}
+                    </td>
+                    <td>
+                      <a class="btn btn-primary" href="{% url 'user' record.user_id %}">{{ record.get_username }} &raquo;</a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <hr>
+            <p>No active records</p>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+{% endblock %}
